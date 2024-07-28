@@ -30,6 +30,24 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <string>
+#include <sstream>
+#include <fstream>
+#include <iostream>
+#include <vector>
+#include <windows.h>
+#include <iostream>
+#include <fstream>
+#include <sstream>
+#include <string>
+#include <windows.h>
+#include <iostream>
+#include <fstream>
+#include <sstream>
+#include <string>
 
 // #include <sb7.h>
 
@@ -48,6 +66,131 @@ static const unsigned char identifier[] =
 {
     0xAB, 0x4B, 0x54, 0x58, 0x20, 0x31, 0x31, 0xBB, 0x0D, 0x0A, 0x1A, 0x0A
 };
+
+// Function to get the next available filename with increasing numbers
+std::string getNextFilename(const std::string& prefix) {
+    static int counter = 0;
+    std::string filename;
+    std::ifstream file;
+
+    //do {
+        std::ostringstream oss;
+        oss << prefix << counter << ".bmp";
+        filename = oss.str();
+        //file.open(filename);
+        //if (file.is_open()) {
+        //    file.close();
+        //}
+        counter++;
+    //} while (file.is_open());
+
+    return filename;
+}
+
+// Function to save the bitmap to a file
+bool SaveBitmapToFile(HBITMAP hBitmap, const char* filePath) {
+    BITMAP bmp;
+    BITMAPFILEHEADER bmpFileHeader;
+    BITMAPINFOHEADER bmpInfoHeader;
+    DWORD dwBmpSize;
+    HANDLE hDIB;
+    char* lpbitmap;
+    DWORD dwSizeofDIB;
+    HANDLE hFile;
+    DWORD dwBytesWritten = 0;
+
+    // Get the bitmap details
+    GetObject(hBitmap, sizeof(BITMAP), &bmp);
+
+    // Define the BMP file header
+    bmpFileHeader.bfType = 0x4D42; // 'BM'
+    bmpFileHeader.bfOffBits = sizeof(BITMAPFILEHEADER) + sizeof(BITMAPINFOHEADER);
+    bmpFileHeader.bfReserved1 = 0;
+    bmpFileHeader.bfReserved2 = 0;
+
+    // Define the BMP info header
+    bmpInfoHeader.biSize = sizeof(BITMAPINFOHEADER);
+    bmpInfoHeader.biWidth = bmp.bmWidth;
+    bmpInfoHeader.biHeight = bmp.bmHeight;
+    bmpInfoHeader.biPlanes = 1;
+    bmpInfoHeader.biBitCount = bmp.bmBitsPixel;
+    bmpInfoHeader.biCompression = BI_RGB;
+    bmpInfoHeader.biSizeImage = 0;
+    bmpInfoHeader.biXPelsPerMeter = 0;
+    bmpInfoHeader.biYPelsPerMeter = 0;
+    bmpInfoHeader.biClrUsed = 0;
+    bmpInfoHeader.biClrImportant = 0;
+
+    // Calculate the BMP size
+    dwBmpSize = ((bmp.bmWidth * bmpInfoHeader.biBitCount + 31) / 32) * 4 * bmp.bmHeight;
+
+    // Create a device-independent bitmap
+    hDIB = GlobalAlloc(GHND, dwBmpSize);
+    lpbitmap = (char*)GlobalLock(hDIB);
+
+    // Get the bitmap bits
+    GetDIBits(GetDC(NULL), hBitmap, 0, (UINT)bmp.bmHeight, lpbitmap, (BITMAPINFO*)&bmpInfoHeader, DIB_RGB_COLORS);
+
+    // Open the file to save the bitmap
+    hFile = CreateFile(filePath, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+
+    // Write the file header
+    WriteFile(hFile, &bmpFileHeader, sizeof(BITMAPFILEHEADER), &dwBytesWritten, NULL);
+
+    // Write the info header
+    WriteFile(hFile, &bmpInfoHeader, sizeof(BITMAPINFOHEADER), &dwBytesWritten, NULL);
+
+    // Write the bitmap bits
+    WriteFile(hFile, lpbitmap, dwBmpSize, &dwBytesWritten, NULL);
+
+    // Unlock and free the DIB
+    GlobalUnlock(hDIB);
+    GlobalFree(hDIB);
+
+    // Close the file handle
+    CloseHandle(hFile);
+
+    return true;
+}
+
+void saveBitmap(const header& h, unsigned char* data) {
+    int bitsPerPixel = 24;
+    switch (h.glbaseinternalformat)
+    {
+    case GL_RED:    bitsPerPixel = 8;
+        break;
+    case GL_RG:     bitsPerPixel = 16;
+        break;
+    case GL_BGR:
+    case GL_RGB:    bitsPerPixel = 24;
+        break;
+    case GL_BGRA:
+    case GL_RGBA:   bitsPerPixel = 32;
+        break;
+    default:
+        std::cerr << "Failed to create bitmap." << std::endl;
+        break;
+    }
+    // Create the bitmap
+    HBITMAP hBitmap = CreateBitmap(h.pixelwidth, h.pixelheight, 1, bitsPerPixel, data);
+    if (!hBitmap) {
+        std::cerr << "Failed to create bitmap." << std::endl;
+    }
+
+    // Generate the next available filename
+    std::string filename = getNextFilename("image_");
+
+    // Save the bitmap to a file
+    if (!SaveBitmapToFile(hBitmap, filename.c_str())) {
+        std::cerr << "Failed to save bitmap to file." << std::endl;
+    }
+    else {
+        std::cout << "Bitmap saved to " << filename << std::endl;
+    }
+
+    // Clean up
+    DeleteObject(hBitmap);
+}
 
 static const unsigned int swap32(const unsigned int u32)
 {
@@ -249,6 +392,7 @@ unsigned int load(const char * filename, unsigned int tex)
             else
             {
                 glTexStorage2D(GL_TEXTURE_2D, h.miplevels, h.glinternalformat, h.pixelwidth, h.pixelheight);
+                saveBitmap(h, data);
                 {
                     unsigned char * ptr = data;
                     unsigned int height = h.pixelheight;
@@ -288,6 +432,7 @@ unsigned int load(const char * filename, unsigned int tex)
                 for (unsigned int i = 0; i < h.faces; i++)
                 {
                     glTexSubImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, 0, 0, h.pixelwidth, h.pixelheight, h.glformat, h.gltype, data + face_size * i);
+                    saveBitmap(h, data + face_size * i);
                 }
             }
             break;
