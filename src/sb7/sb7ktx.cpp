@@ -191,6 +191,61 @@ void saveBitmap(const header& h, unsigned char* data) {
     // Clean up
     DeleteObject(hBitmap);
 }
+// Function to save bitmap to a file
+void SaveBitmapCpp(const char* filePath, int width, int height, unsigned char* pixelData) {
+    // Calculate the size of the bitmap file headers
+    int fileHeaderSize = 14;
+    int infoHeaderSize = 40;
+    int pixelDataSize = width * height * 3;
+
+    // Create the file header
+    unsigned char fileHeader[] = {
+        0x42, 0x4D,             // Signature 'BM'
+        0, 0, 0, 0,             // Image file size in bytes
+        0, 0, 0, 0,             // Reserved
+        54, 0, 0, 0             // Start of pixel array (54 bytes)
+    };
+
+    // Fill in the size
+    int fileSize = fileHeaderSize + infoHeaderSize + pixelDataSize;
+    fileHeader[2] = (unsigned char)(fileSize);
+    fileHeader[3] = (unsigned char)(fileSize >> 8);
+    fileHeader[4] = (unsigned char)(fileSize >> 16);
+    fileHeader[5] = (unsigned char)(fileSize >> 24);
+
+    // Create the info header
+    unsigned char infoHeader[] = {
+        40, 0, 0, 0,            // Header size (40 bytes)
+        0, 0, 0, 0,             // Image width
+        0, 0, 0, 0,             // Image height
+        1, 0,                   // Number of color planes
+        24, 0,                  // Bits per pixel (24)
+        0, 0, 0, 0,             // Compression (none)
+        0, 0, 0, 0,             // Image size (no compression)
+        0, 0, 0, 0,             // Horizontal resolution (pixels per meter)
+        0, 0, 0, 0,             // Vertical resolution (pixels per meter)
+        0, 0, 0, 0,             // Colors in color table (none)
+        0, 0, 0, 0              // Important color count (all colors are important)
+    };
+
+    // Fill in the width and height
+    infoHeader[4] = (unsigned char)(width);
+    infoHeader[5] = (unsigned char)(width >> 8);
+    infoHeader[6] = (unsigned char)(width >> 16);
+    infoHeader[7] = (unsigned char)(width >> 24);
+
+    infoHeader[8] = (unsigned char)(height);
+    infoHeader[9] = (unsigned char)(height >> 8);
+    infoHeader[10] = (unsigned char)(height >> 16);
+    infoHeader[11] = (unsigned char)(height >> 24);
+
+    // Write headers and pixel data to the file
+    std::ofstream outFile(filePath, std::ios::out | std::ios::binary);
+    outFile.write(reinterpret_cast<char*>(fileHeader), fileHeaderSize);
+    outFile.write(reinterpret_cast<char*>(infoHeader), infoHeaderSize);
+    outFile.write(reinterpret_cast<char*>(pixelData), pixelDataSize);
+    outFile.close();
+}
 
 static const unsigned int swap32(const unsigned int u32)
 {
@@ -388,11 +443,19 @@ unsigned int load(const char * filename, unsigned int tex)
             if (h.gltype == GL_NONE)
             {
                 glCompressedTexImage2D(GL_TEXTURE_2D, 0, h.glinternalformat, h.pixelwidth, h.pixelheight, 0, 420 * 380 / 2, data);
+                // Generate the next available filename
+                std::string filename = getNextFilename("image_");
+                // Save the bitmap to a file
+                SaveBitmapCpp(filename.c_str(), h.pixelwidth, h.pixelheight, data);
             }
             else
             {
                 glTexStorage2D(GL_TEXTURE_2D, h.miplevels, h.glinternalformat, h.pixelwidth, h.pixelheight);
-                saveBitmap(h, data);
+                // Generate the next available filename
+                std::string filename = getNextFilename("image_");
+                // Save the bitmap to a file
+                SaveBitmapCpp(filename.c_str(), h.pixelwidth, h.pixelheight, data);
+                //saveBitmap(h, data);
                 {
                     unsigned char * ptr = data;
                     unsigned int height = h.pixelheight;
