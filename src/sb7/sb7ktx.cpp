@@ -423,6 +423,13 @@ unsigned int load(const char * filename, unsigned int tex)
         case GL_TEXTURE_2D_ARRAY:
             glTexStorage3D(GL_TEXTURE_2D_ARRAY, h.miplevels, h.glinternalformat, h.pixelwidth, h.pixelheight, h.arrayelements);
             glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, 0, h.pixelwidth, h.pixelheight, h.arrayelements, h.glformat, h.gltype, data);
+            {
+                unsigned int face_size = calculate_face_size(h);
+                for (unsigned int i = 0; i < h.arrayelements; i++)
+                {
+                    saveBitmap(h, data + face_size * i);
+                }
+            }
             break;
         case GL_TEXTURE_CUBE_MAP:
             glTexStorage2D(GL_TEXTURE_CUBE_MAP, h.miplevels, h.glinternalformat, h.pixelwidth, h.pixelheight);
