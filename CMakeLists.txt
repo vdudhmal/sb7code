@@ -86,6 +86,7 @@ set(EXAMPLES
   movingtri
   msaanative
   multidrawindirect
+  multimaterial
   multiscissor
   multiviewport
   noperspective
