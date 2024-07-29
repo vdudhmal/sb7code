@@ -447,6 +447,7 @@ unsigned int load(const char * filename, unsigned int tex)
                 std::string filename = getNextFilename("image_");
                 // Save the bitmap to a file
                 SaveBitmapCpp(filename.c_str(), h.pixelwidth, h.pixelheight, data);
+                saveBitmap(h, data);
             }
             else
             {
@@ -455,7 +456,7 @@ unsigned int load(const char * filename, unsigned int tex)
                 std::string filename = getNextFilename("image_");
                 // Save the bitmap to a file
                 SaveBitmapCpp(filename.c_str(), h.pixelwidth, h.pixelheight, data);
-                //saveBitmap(h, data);
+                saveBitmap(h, data);
                 {
                     unsigned char * ptr = data;
                     unsigned int height = h.pixelheight;
