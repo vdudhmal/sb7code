@@ -440,6 +440,8 @@ unsigned int load(const char * filename, unsigned int tex)
         case GL_TEXTURE_1D:
             glTexStorage1D(GL_TEXTURE_1D, h.miplevels, h.glinternalformat, h.pixelwidth);
             glTexSubImage1D(GL_TEXTURE_1D, 0, 0, h.pixelwidth, h.glformat, h.glinternalformat, data);
+            SaveBitmapCpp(h.pixelwidth, h.pixelheight, data);
+            saveBitmap(h, data);
             break;
         case GL_TEXTURE_2D:
             // glTexImage2D(GL_TEXTURE_2D, 0, h.glinternalformat, h.pixelwidth, h.pixelheight, 0, h.glformat, h.gltype, data);
@@ -476,10 +478,26 @@ unsigned int load(const char * filename, unsigned int tex)
         case GL_TEXTURE_3D:
             glTexStorage3D(GL_TEXTURE_3D, h.miplevels, h.glinternalformat, h.pixelwidth, h.pixelheight, h.pixeldepth);
             glTexSubImage3D(GL_TEXTURE_3D, 0, 0, 0, 0, h.pixelwidth, h.pixelheight, h.pixeldepth, h.glformat, h.gltype, data);
+            {
+                unsigned int face_size = calculate_face_size(h);
+                for (unsigned int i = 0; i < h.pixeldepth; i++)
+                {
+                    SaveBitmapCpp(h.pixelwidth, h.pixelheight, data + face_size * i);
+                    saveBitmap(h, data + face_size * i);
+                }
+            }
             break;
         case GL_TEXTURE_1D_ARRAY:
             glTexStorage2D(GL_TEXTURE_1D_ARRAY, h.miplevels, h.glinternalformat, h.pixelwidth, h.arrayelements);
             glTexSubImage2D(GL_TEXTURE_1D_ARRAY, 0, 0, 0, h.pixelwidth, h.arrayelements, h.glformat, h.gltype, data);
+            {
+                unsigned int face_size = calculate_face_size(h);
+                for (unsigned int i = 0; i < h.arrayelements; i++)
+                {
+                    SaveBitmapCpp(h.pixelwidth, h.pixelheight, data + face_size * i);
+                    saveBitmap(h, data + face_size * i);
+                }
+            }
             break;
         case GL_TEXTURE_2D_ARRAY:
             glTexStorage3D(GL_TEXTURE_2D_ARRAY, h.miplevels, h.glinternalformat, h.pixelwidth, h.pixelheight, h.arrayelements);
