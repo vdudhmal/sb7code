@@ -337,22 +337,19 @@ unsigned int load(const char * filename, unsigned int tex)
         case GL_TEXTURE_1D:
             glTexStorage1D(GL_TEXTURE_1D, h.miplevels, h.glinternalformat, h.pixelwidth);
             glTexSubImage1D(GL_TEXTURE_1D, 0, 0, h.pixelwidth, h.glformat, h.glinternalformat, data);
-            SaveBitmapCpp(h.pixelwidth, h.pixelheight, data);
-            saveBitmap(h, data);
+            savePng(getNextFilename(), data, h);
             break;
         case GL_TEXTURE_2D:
             // glTexImage2D(GL_TEXTURE_2D, 0, h.glinternalformat, h.pixelwidth, h.pixelheight, 0, h.glformat, h.gltype, data);
             if (h.gltype == GL_NONE)
             {
                 glCompressedTexImage2D(GL_TEXTURE_2D, 0, h.glinternalformat, h.pixelwidth, h.pixelheight, 0, 420 * 380 / 2, data);
-                SaveBitmapCpp(h.pixelwidth, h.pixelheight, data);
-                saveBitmap(h, data);
+                savePng(getNextFilename(), data, h);
             }
             else
             {
                 glTexStorage2D(GL_TEXTURE_2D, h.miplevels, h.glinternalformat, h.pixelwidth, h.pixelheight);
-                SaveBitmapCpp(h.pixelwidth, h.pixelheight, data);
-                saveBitmap(h, data);
+                savePng(getNextFilename(), data, h);
                 {
                     unsigned char * ptr = data;
                     unsigned int height = h.pixelheight;
@@ -379,8 +376,7 @@ unsigned int load(const char * filename, unsigned int tex)
                 unsigned int face_size = calculate_face_size(h);
                 for (unsigned int i = 0; i < h.pixeldepth; i++)
                 {
-                    SaveBitmapCpp(h.pixelwidth, h.pixelheight, data + face_size * i);
-                    saveBitmap(h, data + face_size * i);
+                    savePng(getNextFilename(), data + face_size * i, h);
                 }
             }
             break;
@@ -391,8 +387,7 @@ unsigned int load(const char * filename, unsigned int tex)
                 unsigned int face_size = calculate_face_size(h);
                 for (unsigned int i = 0; i < h.arrayelements; i++)
                 {
-                    SaveBitmapCpp(h.pixelwidth, h.pixelheight, data + face_size * i);
-                    saveBitmap(h, data + face_size * i);
+                    savePng(getNextFilename(), data + face_size * i, h);
                 }
             }
             break;
@@ -403,8 +398,7 @@ unsigned int load(const char * filename, unsigned int tex)
                 unsigned int face_size = calculate_face_size(h);
                 for (unsigned int i = 0; i < h.arrayelements; i++)
                 {
-                    SaveBitmapCpp(h.pixelwidth, h.pixelheight, data + face_size * i);
-                    saveBitmap(h, data + face_size * i);
+                    savePng(getNextFilename(), data + face_size * i, h);
                 }
             }
             break;
@@ -416,8 +410,7 @@ unsigned int load(const char * filename, unsigned int tex)
                 for (unsigned int i = 0; i < h.faces; i++)
                 {
                     glTexSubImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, 0, 0, h.pixelwidth, h.pixelheight, h.glformat, h.gltype, data + face_size * i);
-                    SaveBitmapCpp(h.pixelwidth, h.pixelheight, data + face_size * i);
-                    saveBitmap(h, data + face_size * i);
+                    savePng(getNextFilename(), data + face_size * i, h);
                 }
             }
             break;
@@ -428,8 +421,7 @@ unsigned int load(const char * filename, unsigned int tex)
                 unsigned int face_size = calculate_face_size(h);
                 for (unsigned int i = 0; i < h.faces * h.arrayelements; i++)
                 {
-                    SaveBitmapCpp(h.pixelwidth, h.pixelheight, data + face_size * i);
-                    saveBitmap(h, data + face_size * i);
+                    savePng(getNextFilename(), data + face_size * i, h);
                 }
             }
             break;
