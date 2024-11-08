@@ -39,6 +39,7 @@ add_library(sb7
             src/sb7/sb7object.cpp
             src/sb7/sb7shader.cpp
             src/sb7/sb7textoverlay.cpp
+            src/sb7/lodepng.cpp
             src/sb7/gl3w.c
 )
 

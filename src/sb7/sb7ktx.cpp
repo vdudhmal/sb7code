@@ -52,6 +52,7 @@
 // #include <sb7.h>
 
 #include "GL/gl3w.h"
+#include "lodepng.h"
 
 namespace sb7
 {
@@ -66,189 +67,6 @@ static const unsigned char identifier[] =
 {
     0xAB, 0x4B, 0x54, 0x58, 0x20, 0x31, 0x31, 0xBB, 0x0D, 0x0A, 0x1A, 0x0A
 };
-
-// Function to get the next available filename with increasing numbers
-std::string getNextFilename(const std::string& prefix) {
-    static int counter = 0;
-    std::string filename;
-    std::ifstream file;
-
-    //do {
-        std::ostringstream oss;
-        oss << prefix << counter << ".bmp";
-        filename = oss.str();
-        //file.open(filename);
-        //if (file.is_open()) {
-        //    file.close();
-        //}
-        counter++;
-    //} while (file.is_open());
-
-    return filename;
-}
-
-// Function to save the bitmap to a file
-bool SaveBitmapToFile(HBITMAP hBitmap, const char* filePath) {
-    BITMAP bmp;
-    BITMAPFILEHEADER bmpFileHeader;
-    BITMAPINFOHEADER bmpInfoHeader;
-    DWORD dwBmpSize;
-    HANDLE hDIB;
-    char* lpbitmap;
-    DWORD dwSizeofDIB;
-    HANDLE hFile;
-    DWORD dwBytesWritten = 0;
-
-    // Get the bitmap details
-    GetObject(hBitmap, sizeof(BITMAP), &bmp);
-
-    // Define the BMP file header
-    bmpFileHeader.bfType = 0x4D42; // 'BM'
-    bmpFileHeader.bfOffBits = sizeof(BITMAPFILEHEADER) + sizeof(BITMAPINFOHEADER);
-    bmpFileHeader.bfReserved1 = 0;
-    bmpFileHeader.bfReserved2 = 0;
-
-    // Define the BMP info header
-    bmpInfoHeader.biSize = sizeof(BITMAPINFOHEADER);
-    bmpInfoHeader.biWidth = bmp.bmWidth;
-    bmpInfoHeader.biHeight = bmp.bmHeight;
-    bmpInfoHeader.biPlanes = 1;
-    bmpInfoHeader.biBitCount = bmp.bmBitsPixel;
-    bmpInfoHeader.biCompression = BI_RGB;
-    bmpInfoHeader.biSizeImage = 0;
-    bmpInfoHeader.biXPelsPerMeter = 0;
-    bmpInfoHeader.biYPelsPerMeter = 0;
-    bmpInfoHeader.biClrUsed = 0;
-    bmpInfoHeader.biClrImportant = 0;
-
-    // Calculate the BMP size
-    dwBmpSize = ((bmp.bmWidth * bmpInfoHeader.biBitCount + 31) / 32) * 4 * bmp.bmHeight;
-
-    // Create a device-independent bitmap
-    hDIB = GlobalAlloc(GHND, dwBmpSize);
-    lpbitmap = (char*)GlobalLock(hDIB);
-
-    // Get the bitmap bits
-    GetDIBits(GetDC(NULL), hBitmap, 0, (UINT)bmp.bmHeight, lpbitmap, (BITMAPINFO*)&bmpInfoHeader, DIB_RGB_COLORS);
-
-    // Open the file to save the bitmap
-    hFile = CreateFile(filePath, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
-
-    // Write the file header
-    WriteFile(hFile, &bmpFileHeader, sizeof(BITMAPFILEHEADER), &dwBytesWritten, NULL);
-
-    // Write the info header
-    WriteFile(hFile, &bmpInfoHeader, sizeof(BITMAPINFOHEADER), &dwBytesWritten, NULL);
-
-    // Write the bitmap bits
-    WriteFile(hFile, lpbitmap, dwBmpSize, &dwBytesWritten, NULL);
-
-    // Unlock and free the DIB
-    GlobalUnlock(hDIB);
-    GlobalFree(hDIB);
-
-    // Close the file handle
-    CloseHandle(hFile);
-
-    return true;
-}
-
-void saveBitmap(const header& h, unsigned char* data) {
-    int bitsPerPixel = 24;
-    switch (h.glbaseinternalformat)
-    {
-    case GL_RED:    bitsPerPixel = 8;
-        break;
-    case GL_RG:     bitsPerPixel = 16;
-        break;
-    case GL_BGR:
-    case GL_RGB:    bitsPerPixel = 24;
-        break;
-    case GL_BGRA:
-    case GL_RGBA:   bitsPerPixel = 32;
-        break;
-    default:
-        std::cerr << "Failed to create bitmap." << std::endl;
-        break;
-    }
-    // Create the bitmap
-    HBITMAP hBitmap = CreateBitmap(h.pixelwidth, h.pixelheight, 1, bitsPerPixel, data);
-    if (!hBitmap) {
-        std::cerr << "Failed to create bitmap." << std::endl;
-    }
-
-    // Generate the next available filename
-    std::string filename = getNextFilename("bmps/image_");
-
-    // Save the bitmap to a file
-    if (!SaveBitmapToFile(hBitmap, filename.c_str())) {
-        std::cerr << "Failed to save bitmap to file." << std::endl;
-    }
-    else {
-        std::cout << "Bitmap saved to " << filename << std::endl;
-    }
-
-    // Clean up
-    DeleteObject(hBitmap);
-}
-// Function to save bitmap to a file
-void SaveBitmapCpp(int width, int height, unsigned char* pixelData) {
-    // Calculate the size of the bitmap file headers
-    int fileHeaderSize = 14;
-    int infoHeaderSize = 40;
-    int pixelDataSize = width * height * 3;
-
-    // Create the file header
-    unsigned char fileHeader[] = {
-        0x42, 0x4D,             // Signature 'BM'
-        0, 0, 0, 0,             // Image file size in bytes
-        0, 0, 0, 0,             // Reserved
-        54, 0, 0, 0             // Start of pixel array (54 bytes)
-    };
-
-    // Fill in the size
-    int fileSize = fileHeaderSize + infoHeaderSize + pixelDataSize;
-    fileHeader[2] = (unsigned char)(fileSize);
-    fileHeader[3] = (unsigned char)(fileSize >> 8);
-    fileHeader[4] = (unsigned char)(fileSize >> 16);
-    fileHeader[5] = (unsigned char)(fileSize >> 24);
-
-    // Create the info header
-    unsigned char infoHeader[] = {
-        40, 0, 0, 0,            // Header size (40 bytes)
-        0, 0, 0, 0,             // Image width
-        0, 0, 0, 0,             // Image height
-        1, 0,                   // Number of color planes
-        24, 0,                  // Bits per pixel (24)
-        0, 0, 0, 0,             // Compression (none)
-        0, 0, 0, 0,             // Image size (no compression)
-        0, 0, 0, 0,             // Horizontal resolution (pixels per meter)
-        0, 0, 0, 0,             // Vertical resolution (pixels per meter)
-        0, 0, 0, 0,             // Colors in color table (none)
-        0, 0, 0, 0              // Important color count (all colors are important)
-    };
-
-    // Fill in the width and height
-    infoHeader[4] = (unsigned char)(width);
-    infoHeader[5] = (unsigned char)(width >> 8);
-    infoHeader[6] = (unsigned char)(width >> 16);
-    infoHeader[7] = (unsigned char)(width >> 24);
-
-    infoHeader[8] = (unsigned char)(height);
-    infoHeader[9] = (unsigned char)(height >> 8);
-    infoHeader[10] = (unsigned char)(height >> 16);
-    infoHeader[11] = (unsigned char)(height >> 24);
-
-    // Generate the next available filename
-    std::string filename = getNextFilename("bmps/image_");
-
-    // Write headers and pixel data to the file
-    std::ofstream outFile(filename.c_str(), std::ios::out | std::ios::binary);
-    outFile.write(reinterpret_cast<char*>(fileHeader), fileHeaderSize);
-    outFile.write(reinterpret_cast<char*>(infoHeader), infoHeaderSize);
-    outFile.write(reinterpret_cast<char*>(pixelData), pixelDataSize);
-    outFile.close();
-}
 
 static const unsigned int swap32(const unsigned int u32)
 {
@@ -312,6 +130,85 @@ static unsigned int calculate_face_size(const header& h)
     unsigned int stride = calculate_stride(h, h.pixelwidth);
 
     return stride * h.pixelheight;
+}
+
+std::string getNextFilename()
+{
+    static int counter = 0;
+    std::string filename;
+    std::ifstream file;
+    std::ostringstream oss;
+    oss << "images/image_" << counter << ".png";
+    filename = oss.str();
+    counter++;
+    return filename;
+}
+
+static bool savePng(const std::string &filename, const unsigned char *imageData, const header &h)
+{
+    unsigned int width = h.pixelwidth;   // Image width from header
+    unsigned int height = h.pixelheight; // Image height from header
+
+    // Calculate stride based on header info and image width
+    unsigned int stride = calculate_stride(h, width);
+
+    // Allocate a buffer to hold the image data for encoding
+    std::vector<unsigned char> pngBuffer(height * stride);
+
+    // Copy the image data into the buffer (considering potential padding)
+    for (unsigned int y = 0; y < height; ++y)
+    {
+        unsigned int rowOffset = y * stride;
+        const unsigned char *rowData = imageData + y * stride; // Assuming imageData contains raw row data
+        std::memcpy(&pngBuffer[rowOffset], rowData, stride);
+    }
+
+    // Adjust the format based on the header info
+    LodePNGColorType colorType;
+    switch (h.glbaseinternalformat)
+    {
+    case GL_RED:
+        colorType = LCT_GREY;
+        break;
+    case GL_RG:
+        colorType = LCT_GREY_ALPHA;
+        break;
+    case GL_RGB:
+        colorType = LCT_RGB;
+        break;
+    case GL_BGR:
+        colorType = LCT_RGB;
+        // Swap Red and Blue for BGR -> RGB
+        for (unsigned int i = 0; i < pngBuffer.size(); i += 3)
+        {
+            std::swap(pngBuffer[i], pngBuffer[i + 2]);
+        }
+        break;
+    case GL_RGBA:
+        colorType = LCT_RGBA;
+        break;
+    case GL_BGRA:
+        colorType = LCT_RGBA;
+        // Swap Red and Blue for BGRA -> RGBA
+        for (unsigned int i = 0; i < pngBuffer.size(); i += 4)
+        {
+            std::swap(pngBuffer[i], pngBuffer[i + 2]);
+        }
+        break;
+    default:
+        colorType = LCT_RGBA; // Default fallback
+        break;
+    }
+
+    // Encode the image data into a PNG file
+    unsigned error = lodepng::encode(filename, pngBuffer, width, height, colorType, 8);
+    if (error)
+    {
+        std::cerr << "PNG encode error " << error << ": " << lodepng_error_text(error) << std::endl;
+        return false;
+    }
+
+    return true;
 }
 
 extern
