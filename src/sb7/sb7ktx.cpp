@@ -51,45 +51,6 @@ namespace ktx
 namespace file
 {
 
-// Function to print the contents of header
-void printHeader(const header& hdr, const char * filename) {
-    std::ostringstream message;
-
-    message << "filename = " << filename << std::endl;
-
-    // Print each field in the specified format
-    message << "unsigned char\tidentifier[12] = ";
-    for (int i = 0; i < 12; ++i) {
-        message << static_cast<int>(hdr.identifier[i]) << " ";
-    }
-    message << std::endl;
-
-    message << "unsigned int\tendianness = " << hdr.endianness << std::endl;
-    message << "unsigned int\tgltype = " << hdr.gltype << std::endl;
-    message << "unsigned int\tgltypesize = " << hdr.gltypesize << std::endl;
-    message << "unsigned int\tglformat = " << hdr.glformat << std::endl;
-    message << "unsigned int\tglinternalformat = " << hdr.glinternalformat << std::endl;
-    message << "unsigned int\tglbaseinternalformat = " << hdr.glbaseinternalformat << std::endl;
-    message << "unsigned int\tpixelwidth = " << hdr.pixelwidth << std::endl;
-    message << "unsigned int\tpixelheight = " << hdr.pixelheight << std::endl;
-    message << "unsigned int\tpixeldepth = " << hdr.pixeldepth << std::endl;
-    message << "unsigned int\tarrayelements = " << hdr.arrayelements << std::endl;
-    message << "unsigned int\tfaces = " << hdr.faces << std::endl;
-    message << "unsigned int\tmiplevels = " << hdr.miplevels << std::endl;
-    message << "unsigned int\tkeypairbytes = " << hdr.keypairbytes << std::endl;
-    message << std::endl;
-
-    // Print to console
-    std::cout << message.str();
-
-    // Optionally log to a file
-    std::ofstream logFile("logs/debug.log", std::ios_base::app);
-    if (logFile.is_open()) {
-        logFile << message.str();
-        logFile.close();
-    }
-}
-
 static const unsigned char identifier[] =
 {
     0xAB, 0x4B, 0x54, 0x58, 0x20, 0x31, 0x31, 0xBB, 0x0D, 0x0A, 0x1A, 0x0A
@@ -159,7 +120,7 @@ static unsigned int calculate_face_size(const header& h)
     return stride * h.pixelheight;
 }
 
-std::string getNextFilename(const char* baseFilename, int counter)
+std::string getNextImageFilename(const char* baseFilename, int counter)
 {
     std::string filename(baseFilename);
 
@@ -187,6 +148,75 @@ std::string getNextFilename(const char* baseFilename, int counter)
     }
 
     return oss.str();
+}
+
+std::string getNextLogFilename(const char* baseFilename, int counter)
+{
+    std::string filename(baseFilename);
+
+    // Remove directory path by finding the last slash ('/') and cutting from there
+    size_t lastSlashPos = filename.find_last_of("/\\");
+    if (lastSlashPos != std::string::npos) {
+        filename = filename.substr(lastSlashPos + 1);  // Get the part after the last slash
+    }
+
+    // Remove file extension if it exists
+    size_t extPos = filename.find_last_of('.');
+    if (extPos != std::string::npos) {
+        filename = filename.substr(0, extPos);  // Remove extension
+    }
+
+    // Add the counter to the filename
+    std::ostringstream oss;
+    if (counter != -1)
+    {
+        oss << "logs/" << filename << "_" << counter << ".log";
+    }
+    else
+    {
+        oss << "logs/" << filename << ".log";
+    }
+
+    return oss.str();
+}
+
+// Function to print the contents of header
+void printHeader(const header& hdr, const std::string &filename) {
+    std::ostringstream message;
+
+    message << "filename = " << filename << std::endl;
+
+    // Print each field in the specified format
+    message << "unsigned char\tidentifier[12] = ";
+    for (int i = 0; i < 12; ++i) {
+        message << static_cast<int>(hdr.identifier[i]) << " ";
+    }
+    message << std::endl;
+
+    message << "unsigned int\tendianness = " << hdr.endianness << std::endl;
+    message << "unsigned int\tgltype = " << hdr.gltype << std::endl;
+    message << "unsigned int\tgltypesize = " << hdr.gltypesize << std::endl;
+    message << "unsigned int\tglformat = " << hdr.glformat << std::endl;
+    message << "unsigned int\tglinternalformat = " << hdr.glinternalformat << std::endl;
+    message << "unsigned int\tglbaseinternalformat = " << hdr.glbaseinternalformat << std::endl;
+    message << "unsigned int\tpixelwidth = " << hdr.pixelwidth << std::endl;
+    message << "unsigned int\tpixelheight = " << hdr.pixelheight << std::endl;
+    message << "unsigned int\tpixeldepth = " << hdr.pixeldepth << std::endl;
+    message << "unsigned int\tarrayelements = " << hdr.arrayelements << std::endl;
+    message << "unsigned int\tfaces = " << hdr.faces << std::endl;
+    message << "unsigned int\tmiplevels = " << hdr.miplevels << std::endl;
+    message << "unsigned int\tkeypairbytes = " << hdr.keypairbytes << std::endl;
+    message << std::endl;
+
+    // Print to console
+    std::cout << message.str();
+
+    // Optionally log to a file
+    std::ofstream logFile(filename);
+    if (logFile.is_open()) {
+        logFile << message.str();
+        logFile.close();
+    }
 }
 
 static bool savePng(const std::string &filename, const unsigned char *imageData, const header &h)
@@ -377,26 +407,26 @@ unsigned int load(const char * filename, unsigned int tex)
         h.miplevels = 1;
     }
 
-    printHeader(h, filename);
+    printHeader(h, getNextLogFilename(filename, -1));
 
     switch (target)
     {
         case GL_TEXTURE_1D:
             glTexStorage1D(GL_TEXTURE_1D, h.miplevels, h.glinternalformat, h.pixelwidth);
             glTexSubImage1D(GL_TEXTURE_1D, 0, 0, h.pixelwidth, h.glformat, h.glinternalformat, data);
-            savePng(getNextFilename(filename, -1), data, h);
+            savePng(getNextImageFilename(filename, -1), data, h);
             break;
         case GL_TEXTURE_2D:
             // glTexImage2D(GL_TEXTURE_2D, 0, h.glinternalformat, h.pixelwidth, h.pixelheight, 0, h.glformat, h.gltype, data);
             if (h.gltype == GL_NONE)
             {
                 glCompressedTexImage2D(GL_TEXTURE_2D, 0, h.glinternalformat, h.pixelwidth, h.pixelheight, 0, 420 * 380 / 2, data);
-                savePng(getNextFilename(filename, -1), data, h);
+                savePng(getNextImageFilename(filename, -1), data, h);
             }
             else
             {
                 glTexStorage2D(GL_TEXTURE_2D, h.miplevels, h.glinternalformat, h.pixelwidth, h.pixelheight);
-                savePng(getNextFilename(filename, -1), data, h);
+                savePng(getNextImageFilename(filename, -1), data, h);
                 {
                     unsigned char * ptr = data;
                     unsigned int height = h.pixelheight;
@@ -423,7 +453,7 @@ unsigned int load(const char * filename, unsigned int tex)
                 unsigned int face_size = calculate_face_size(h);
                 for (unsigned int i = 0; i < h.pixeldepth; i++)
                 {
-                    savePng(getNextFilename(filename, i), data + face_size * i, h);
+                    savePng(getNextImageFilename(filename, i), data + face_size * i, h);
                 }
             }
             break;
@@ -434,7 +464,7 @@ unsigned int load(const char * filename, unsigned int tex)
                 unsigned int face_size = calculate_face_size(h);
                 for (unsigned int i = 0; i < h.arrayelements; i++)
                 {
-                    savePng(getNextFilename(filename, i), data + face_size * i, h);
+                    savePng(getNextImageFilename(filename, i), data + face_size * i, h);
                 }
             }
             break;
@@ -445,7 +475,7 @@ unsigned int load(const char * filename, unsigned int tex)
                 unsigned int face_size = calculate_face_size(h);
                 for (unsigned int i = 0; i < h.arrayelements; i++)
                 {
-                    savePng(getNextFilename(filename, i), data + face_size * i, h);
+                    savePng(getNextImageFilename(filename, i), data + face_size * i, h);
                 }
             }
             break;
@@ -457,7 +487,7 @@ unsigned int load(const char * filename, unsigned int tex)
                 for (unsigned int i = 0; i < h.faces; i++)
                 {
                     glTexSubImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, 0, 0, h.pixelwidth, h.pixelheight, h.glformat, h.gltype, data + face_size * i);
-                    savePng(getNextFilename(filename, i), data + face_size * i, h);
+                    savePng(getNextImageFilename(filename, i), data + face_size * i, h);
                 }
             }
             break;
@@ -468,7 +498,7 @@ unsigned int load(const char * filename, unsigned int tex)
                 unsigned int face_size = calculate_face_size(h);
                 for (unsigned int i = 0; i < h.faces * h.arrayelements; i++)
                 {
-                    savePng(getNextFilename(filename, i), data + face_size * i, h);
+                    savePng(getNextImageFilename(filename, i), data + face_size * i, h);
                 }
             }
             break;
