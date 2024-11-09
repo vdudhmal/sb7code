@@ -132,16 +132,34 @@ static unsigned int calculate_face_size(const header& h)
     return stride * h.pixelheight;
 }
 
-std::string getNextFilename()
+std::string getNextFilename(const char* baseFilename, int counter)
 {
-    static int counter = 0;
-    std::string filename;
-    std::ifstream file;
+    std::string filename(baseFilename);
+
+    // Remove directory path by finding the last slash ('/') and cutting from there
+    size_t lastSlashPos = filename.find_last_of("/\\");
+    if (lastSlashPos != std::string::npos) {
+        filename = filename.substr(lastSlashPos + 1);  // Get the part after the last slash
+    }
+
+    // Remove file extension if it exists
+    size_t extPos = filename.find_last_of('.');
+    if (extPos != std::string::npos) {
+        filename = filename.substr(0, extPos);  // Remove extension
+    }
+
+    // Add the counter to the filename
     std::ostringstream oss;
-    oss << "images/image_" << counter << ".png";
-    filename = oss.str();
-    counter++;
-    return filename;
+    if (counter != -1)
+    {
+        oss << "images/" << filename << "_" << counter << ".png";
+    }
+    else
+    {
+        oss << "images/" << filename << ".png";
+    }
+
+    return oss.str();
 }
 
 static bool savePng(const std::string &filename, const unsigned char *imageData, const header &h)
@@ -155,12 +173,12 @@ static bool savePng(const std::string &filename, const unsigned char *imageData,
     // Allocate a buffer to hold the image data for encoding
     std::vector<unsigned char> pngBuffer(height * stride);
 
-    // Copy the image data into the buffer (considering potential padding)
+    // Copy the image data into the buffer (no flipping)
     for (unsigned int y = 0; y < height; ++y)
     {
         unsigned int rowOffset = y * stride;
-        const unsigned char *rowData = imageData + y * stride; // Assuming imageData contains raw row data
-        std::memcpy(&pngBuffer[rowOffset], rowData, stride);
+        const unsigned char *rowData = imageData + y * stride; // Original row data
+        std::memcpy(&pngBuffer[rowOffset], rowData, stride);    // Direct copy without flipping
     }
 
     // Adjust the format based on the header info
@@ -337,19 +355,19 @@ unsigned int load(const char * filename, unsigned int tex)
         case GL_TEXTURE_1D:
             glTexStorage1D(GL_TEXTURE_1D, h.miplevels, h.glinternalformat, h.pixelwidth);
             glTexSubImage1D(GL_TEXTURE_1D, 0, 0, h.pixelwidth, h.glformat, h.glinternalformat, data);
-            savePng(getNextFilename(), data, h);
+            savePng(getNextFilename(filename, -1), data, h);
             break;
         case GL_TEXTURE_2D:
             // glTexImage2D(GL_TEXTURE_2D, 0, h.glinternalformat, h.pixelwidth, h.pixelheight, 0, h.glformat, h.gltype, data);
             if (h.gltype == GL_NONE)
             {
                 glCompressedTexImage2D(GL_TEXTURE_2D, 0, h.glinternalformat, h.pixelwidth, h.pixelheight, 0, 420 * 380 / 2, data);
-                savePng(getNextFilename(), data, h);
+                savePng(getNextFilename(filename, -1), data, h);
             }
             else
             {
                 glTexStorage2D(GL_TEXTURE_2D, h.miplevels, h.glinternalformat, h.pixelwidth, h.pixelheight);
-                savePng(getNextFilename(), data, h);
+                savePng(getNextFilename(filename, -1), data, h);
                 {
                     unsigned char * ptr = data;
                     unsigned int height = h.pixelheight;
@@ -376,7 +394,7 @@ unsigned int load(const char * filename, unsigned int tex)
                 unsigned int face_size = calculate_face_size(h);
                 for (unsigned int i = 0; i < h.pixeldepth; i++)
                 {
-                    savePng(getNextFilename(), data + face_size * i, h);
+                    savePng(getNextFilename(filename, i), data + face_size * i, h);
                 }
             }
             break;
@@ -387,7 +405,7 @@ unsigned int load(const char * filename, unsigned int tex)
                 unsigned int face_size = calculate_face_size(h);
                 for (unsigned int i = 0; i < h.arrayelements; i++)
                 {
-                    savePng(getNextFilename(), data + face_size * i, h);
+                    savePng(getNextFilename(filename, i), data + face_size * i, h);
                 }
             }
             break;
@@ -398,7 +416,7 @@ unsigned int load(const char * filename, unsigned int tex)
                 unsigned int face_size = calculate_face_size(h);
                 for (unsigned int i = 0; i < h.arrayelements; i++)
                 {
-                    savePng(getNextFilename(), data + face_size * i, h);
+                    savePng(getNextFilename(filename, i), data + face_size * i, h);
                 }
             }
             break;
@@ -410,7 +428,7 @@ unsigned int load(const char * filename, unsigned int tex)
                 for (unsigned int i = 0; i < h.faces; i++)
                 {
                     glTexSubImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, 0, 0, h.pixelwidth, h.pixelheight, h.glformat, h.gltype, data + face_size * i);
-                    savePng(getNextFilename(), data + face_size * i, h);
+                    savePng(getNextFilename(filename, i), data + face_size * i, h);
                 }
             }
             break;
@@ -421,7 +439,7 @@ unsigned int load(const char * filename, unsigned int tex)
                 unsigned int face_size = calculate_face_size(h);
                 for (unsigned int i = 0; i < h.faces * h.arrayelements; i++)
                 {
-                    savePng(getNextFilename(), data + face_size * i, h);
+                    savePng(getNextFilename(filename, i), data + face_size * i, h);
                 }
             }
             break;
