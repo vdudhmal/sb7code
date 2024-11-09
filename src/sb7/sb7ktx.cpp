@@ -30,24 +30,12 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <cstdio>
-#include <cstdlib>
-#include <cstring>
 #include <string>
 #include <sstream>
 #include <fstream>
 #include <iostream>
 #include <vector>
 #include <windows.h>
-#include <iostream>
-#include <fstream>
-#include <sstream>
-#include <string>
-#include <windows.h>
-#include <iostream>
-#include <fstream>
-#include <sstream>
-#include <string>
 
 // #include <sb7.h>
 
@@ -62,6 +50,45 @@ namespace ktx
 
 namespace file
 {
+
+// Function to print the contents of header
+void printHeader(const header& hdr, const char * filename) {
+    std::ostringstream message;
+
+    message << "filename = " << filename << std::endl;
+
+    // Print each field in the specified format
+    message << "unsigned char\tidentifier[12] = ";
+    for (int i = 0; i < 12; ++i) {
+        message << static_cast<int>(hdr.identifier[i]) << " ";
+    }
+    message << std::endl;
+
+    message << "unsigned int\tendianness = " << hdr.endianness << std::endl;
+    message << "unsigned int\tgltype = " << hdr.gltype << std::endl;
+    message << "unsigned int\tgltypesize = " << hdr.gltypesize << std::endl;
+    message << "unsigned int\tglformat = " << hdr.glformat << std::endl;
+    message << "unsigned int\tglinternalformat = " << hdr.glinternalformat << std::endl;
+    message << "unsigned int\tglbaseinternalformat = " << hdr.glbaseinternalformat << std::endl;
+    message << "unsigned int\tpixelwidth = " << hdr.pixelwidth << std::endl;
+    message << "unsigned int\tpixelheight = " << hdr.pixelheight << std::endl;
+    message << "unsigned int\tpixeldepth = " << hdr.pixeldepth << std::endl;
+    message << "unsigned int\tarrayelements = " << hdr.arrayelements << std::endl;
+    message << "unsigned int\tfaces = " << hdr.faces << std::endl;
+    message << "unsigned int\tmiplevels = " << hdr.miplevels << std::endl;
+    message << "unsigned int\tkeypairbytes = " << hdr.keypairbytes << std::endl;
+    message << std::endl;
+
+    // Print to console
+    std::cout << message.str();
+
+    // Optionally log to a file
+    std::ofstream logFile("logs/debug.log", std::ios_base::app);
+    if (logFile.is_open()) {
+        logFile << message.str();
+        logFile.close();
+    }
+}
 
 static const unsigned char identifier[] =
 {
@@ -349,6 +376,8 @@ unsigned int load(const char * filename, unsigned int tex)
     {
         h.miplevels = 1;
     }
+
+    printHeader(h, filename);
 
     switch (target)
     {
