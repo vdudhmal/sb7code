@@ -35,7 +35,6 @@
 #include <fstream>
 #include <iostream>
 #include <vector>
-#include <windows.h>
 
 // #include <sb7.h>
 
